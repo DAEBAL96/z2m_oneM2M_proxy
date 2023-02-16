@@ -5,6 +5,7 @@ var mqtt = require("mqtt");
 
 
 var z2m_conf = z2m_conf_init();
+let z2m_topic_list = {};
 let fs = require("fs");
 let yaml = require("js-yaml");
 const client = mqtt.connect(z2m_conf.mqtt_server);
@@ -258,21 +259,7 @@ function timer_upload(period, cnt_idx) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-
-
-// function make_topic_list(){
-//     var z2m_topic_list = [];
-//     for (var i = 0; i < z2m_conf.device_list.length; i++){
-//         z2m_topic_list.push(z2m_conf.base_topic + "/"+z2m_conf.device_list[i])
-//     }
-//     z2m_topic_list.push(z2m_conf.base_topic + "/bridge/event")
-//     z2m_topic_list.push(z2m_conf.base_topic + "/bridge/response/device/remove")
-//     z2m_topic_list.push(z2m_conf.base_topic + "/bridge/response/device/rename")
-//     return z2m_topic_list;
-// }
-
-function make_topic_list(){
-    var z2m_topic_list = {};
+function init_topic_list(){
     var z2m_device_payload_topic = [];
     var z2m_event_topic = [];
     var device_list_IEEE = Object.keys(z2m_conf.device_list);
@@ -286,30 +273,37 @@ function make_topic_list(){
 
     z2m_topic_list.device_topic = z2m_device_payload_topic;
     z2m_topic_list.event_topic = z2m_event_topic;
-
-    return z2m_topic_list;
+    // return z2m_topic_list;
 }
 
-function z2m_topic_update(udt_type, topic_type, new_topic){
+function z2m_topic_update(udt_type, topic_type, udt_topic){ // topic_type = "device" , "event" , {"from" : , "to" : }
+
     if(udt_type == "add"){
-        console.log(new_topic, "- device & mqtt broker topic add");
         if(topic_type == "device"){
-            z2m_device_payload_topic.push(new_topic);
-            client.subscribe(new_topic);
+            z2m_topic_list.device_topic.push(udt_topic);
+            client.subscribe(udt_topic);
+            console.log(udt_topic, "- device & mqtt broker topic add");
+            console.log(z2m_topic_list)
         }
         else if(topic_type == "event"){
-            z2m_event_topic.push(new_topic);
-            client.subscribe(new_topic);
+            console.log(udt_topic, "- device & mqtt broker topic add");
+            // z2m_topic_list.event_topic.push(new_topic);
+            client.subscribe(udt_topic);
         }
     }
 
-    else if(udt_type == "rename"){ // rename(topic add) -> remove(topic remove) 동시에 이루어져야함 topic sub도 빼내고, topic list var에서 해당 topic도 제거
-        console.log(new_topic, "- device & mqtt broker topic rename");
-        client.subscribe(new_topic);    
+    else if(udt_type == "rename"){ // topic_type = {"from" : from_topic, "to" : to_topic}
+        z2m_topic_list.device_topic = z2m_topic_list.device_topic.filter(element => element !== topic_type.from)
+	z2m_topic_list.device_topic.push(udt_topic);
+        console.log(udt_topic, "- device & mqtt broker topic rename");
+        client.subscribe(udt_topic);    
+        console.log(z2m_topic_list)
     }
 
     else if(udt_type == "remove"){
-        console.log(new_topic, "- device & mqtt broker topic remove");
+        z2m_topic_list.device_topic = z2m_topic_list.device_topic.filter(element => element !== udt_topic)
+        console.log(udt_topic, "- device & mqtt broker topic remove");
+        console.log(z2m_topic_list)
     }
 }
 
@@ -323,107 +317,123 @@ function z2m_topic_init_sub(z2m_topic_list){
 }
 
 function mqtt_connect() {
-    var z2m_topic_list = make_topic_list();     //z2m_topic_list -> {"device_topic" : [], "event_topic" : []}
+    init_topic_list();     //z2m_topic_list -> {"device_topic" : [], "event_topic" : []}
+    console.log(z2m_topic_list)
     z2m_topic_init_sub(z2m_topic_list);
 
     client.on("message", function (topic, message) {
-        mqtt_message_json = JSON.parse(message.toString());
-        if (z2m_topic_list.device_topic.includes(topic)){   // mqtt broker event type -> upload device payload  
-            let payload_owner = (topic.split('/')).at(-1);
-            let device_list_IEEE = Object.keys(z2m_conf.device_list);
-            for (var i = 0; i < device_list_IEEE.length; i ++){
-                if(z2m_conf.device_list[device_list_IEEE[i]] == payload_owner){
-                    var rn = device_list_IEEE[i];
-                    var parent = "/Mobius/" + z2m_conf.base_topic + "/" + rn;
-                    onem2m_client.create_z2m_cin(parent, mqtt_message_json, function(rsc, res_body){
-                        // if (rsc == 5106 || rsc == 2001 || rsc == 4105){
-                        //     console.log("z2m device CSE joined complete");
-                        //     console.log(res_body);
-                        // }
-                        console.log("response code = ", rsc)
-                        console.log(res_body)
-                        console.log("device payload(CNT - CIN) upload complete")
-                    })
-                    break;
-                } 
-            }
-        }
-
-        else if (z2m_topic_list.event_topic.includes(topic)){   // mqtt broker event type -> occur GW event
-            if (topic == z2m_conf.base_topic + "/bridge/event"){
-                if(mqtt_message_json.type == 'device_joined'){
-                    // device_standby_list.friendly_name = "device_joined";
-                    console.log("device joined")
-                }
-                else if(mqtt_message_json.type == 'device_interview' && mqtt_message_json.data.status == 'successful'){
-                    z2m_conf = z2m_conf_init();
-                    console.log("device GW joined complete, removed at the list")
-                    var parent = "/Mobius/zigbee2mqtt"
-                    var rn = mqtt_message_json.data.friendly_name;
-                    onem2m_client.create_z2m_cnt(parent, rn, function (rsc, res_body){
-                        if (rsc == 5106 || rsc == 2001 || rsc == 4105){
-                            console.log("z2m device CSE joined complete");
-                            console.log(res_body);
-                        }
-                    });
-                    var udt_z2m_topic = z2m_conf.base_topic + rn
-                    z2m_topic_update("add", "device", udt_z2m_topic)
+        try{
+            console.log("message in -mqtt");
+            console.log("topic = ", topic);
+            console.log("message = ", message);
+            mqtt_message_json = JSON.parse(message.toString());
+            if (z2m_topic_list.device_topic.includes(topic)){   // mqtt broker event type -> upload device payload  
+                let payload_owner = (topic.split('/')).at(-1);
+                let device_list_IEEE = Object.keys(z2m_conf.device_list);
+                console.log("payload_owner = ", payload_owner)
+                for (var i = 0; i < device_list_IEEE.length; i ++){
+                    if(z2m_conf.device_list[device_list_IEEE[i]] == payload_owner){
+                        var rn = device_list_IEEE[i];
+                        var parent = "/Mobius/" + z2m_conf.base_topic + "/" + rn;
+                        onem2m_client.create_z2m_cin(parent, mqtt_message_json, function(rsc, res_body){
+                            // if (rsc == 5106 || rsc == 2001 || rsc == 4105){
+                            //     console.log("z2m device CSE joined complete");
+                            //     console.log(res_body);
+                            // }
+                            console.log("response code = ", rsc)
+                            console.log(res_body)
+                            console.log("device payload(CNT - CIN) upload complete")
+                        })
+                        break;
+                    } 
                 }
             }
-
-            else if (topic == z2m_conf.base_topic + "/bridge/response/device/remove"){
-                if(mqtt_message_json.status == "ok"){
-                    console.log("device remove on")
-                    let fast_device_list = Object.keys(z2m_conf.device_list);   // fast device ieee list(cnt rn)
-                    var delete_target_cnt_lbl = mqtt_message_json.data.id;
-                    for(var count=0; count < fast_device_list.length; count++){
-                        if(z2m_conf.device_list[fast_device_list[count]] == delete_target_cnt_lbl){
-                            target = "/Mobius/zigbee2mqtt/"+fast_device_list[count];
-                            console.log("remove 대상 : ", target);
-                            onem2m_client.delete_z2m_cnt(target, function(rsc, res_body){
-                                console.log(rsc);
+    
+            else if (z2m_topic_list.event_topic.includes(topic)){   // mqtt broker event type -> occur GW event
+                if (topic == z2m_conf.base_topic + "/bridge/event"){
+                    if(mqtt_message_json.type == 'device_joined'){
+                        // device_standby_list.friendly_name = "device_joined";
+                        console.log("device joined")
+                    }
+                    else if(mqtt_message_json.type == 'device_interview' && mqtt_message_json.data.status == 'successful'){
+                        z2m_conf = z2m_conf_init();
+                        console.log("device GW joined complete, removed at the list")
+                        var parent = "/Mobius/zigbee2mqtt"
+                        var rn = mqtt_message_json.data.friendly_name;
+                        onem2m_client.create_z2m_cnt(parent, rn, function (rsc, res_body){
+                            if (rsc == 5106 || rsc == 2001 || rsc == 4105){
+                                console.log("z2m device CSE joined complete");
                                 console.log(res_body);
-                            });
-                            var udt_z2m_topic = z2m_conf.base_topic + fast_device_list[count];
-                            z2m_topic_update("remove", "device", udt_z2m_topic)
-                            break;
+                            }
+                        });
+                        var udt_z2m_topic = z2m_conf.base_topic + "/" + rn
+                        z2m_topic_update("add", "device", udt_z2m_topic)
+                    }
+                }
+    
+                else if (topic == z2m_conf.base_topic + "/bridge/response/device/remove"){
+                    if(mqtt_message_json.status == "ok"){
+                        console.log("device remove on")
+                        let fast_device_list = Object.keys(z2m_conf.device_list);   // fast device ieee list(cnt rn)
+                        var delete_target_cnt_lbl = mqtt_message_json.data.id;
+                        for(var count=0; count < fast_device_list.length; count++){
+                            if(z2m_conf.device_list[fast_device_list[count]] == delete_target_cnt_lbl){
+                                target = "/Mobius/zigbee2mqtt/"+fast_device_list[count];
+                                console.log("remove 대상 : ", target);
+                                onem2m_client.delete_z2m_cnt(target, function(rsc, res_body){
+                                    console.log(rsc);
+                                    console.log(res_body);
+                                });
+                                var udt_z2m_topic = z2m_conf.base_topic + fast_device_list[count];
+                                z2m_topic_update("remove", "device", udt_z2m_topic)
+                                break;
+                            }
+                        }
+                    }
+                }
+    
+                else if (topic == z2m_conf.base_topic + "/bridge/response/device/rename"){ //{"data":{"from":friends_name, "to":friedns_name}}
+                    console.log("in rename flow")
+                    if(mqtt_message_json.status == "ok"){
+                        z2m_conf = z2m_conf_init();
+                        // let meta_z2m_conf = yaml.load(fs.readFileSync("./configuration.yaml", { encoding: "utf-8" }));
+                        let current_device_list = Object.keys(z2m_conf.device_list);
+                        var update_lbl = mqtt_message_json.data.to;
+                        var from_to_topic = {"from" : z2m_conf.base_topic + '/'+mqtt_message_json.data.from,
+                                                "to" : z2m_conf.base_topic + '/'+mqtt_message_json.data.to};
+                        console.log(current_device_list, "rename 동작 중");
+                        console.log(update_lbl);
+                        for(var i=0; i < current_device_list.length; i++){
+                            if(z2m_conf.device_list[current_device_list[i]] == update_lbl){ // tree 방식으로 전환해보기
+                                target = "/Mobius/zigbee2mqtt/"+ current_device_list[i];
+                                console.log("rename 대상 : ", target)
+                                onem2m_client.update_z2m_cnt(target, update_lbl, function (rsc, res_body){
+                                    if (rsc == 5106 || rsc == 2001 || rsc == 4105){
+                                        console.log("z2m device cnt update complete")
+                                        console.log(res_body);
+                                    }
+                                    else{
+                                        console.log(res_body);
+                                    }
+                                });
+    
+                                var udt_z2m_topic = z2m_conf.base_topic + '/' + update_lbl;
+                                z2m_topic_update("rename", from_to_topic, udt_z2m_topic);
+                                break;
+                            }
                         }
                     }
                 }
             }
-
-            else if (topic == z2m_conf.base_topic + "/bridge/response/device/rename"){
-                if(mqtt_message_json.status == "ok"){
-                    var udt_name = {"from" : mqtt_message_json.data.from,
-                                    "to" : mqtt_message_json.data.to};
-                    z2m_conf = z2m_conf_init();
-                    // let meta_z2m_conf = yaml.load(fs.readFileSync("./configuration.yaml", { encoding: "utf-8" }));
-                    let current_device_list = Object.keys(z2m_conf.device_list);
-                    var update_lbl = mqtt_message_json.data.to;
-                    console.log(current_device_list, "rename 동작 중");
-                    console.log(update_lbl);
-                    for(var i=0; i < current_device_list.length; i++){
-                        if(z2m_conf.device_list[current_device_list[i]] == update_lbl){ // tree 방식으로 전환해보기
-                            target = "/Mobius/zigbee2mqtt/"+ current_device_list[i];
-                            console.log("rename 대상 : ", target)
-                            onem2m_client.update_z2m_cnt(target, update_lbl, function (rsc, res_body){
-                                if (rsc == 5106 || rsc == 2001 || rsc == 4105){
-                                    console.log("z2m device cnt update complete")
-                                    console.log(res_body);
-                                }
-                                else{
-                                    console.log(res_body);
-                                }
-                            });
-                            var udt_z2m_topic = z2m_conf.base_topic + '/' + update_lbl;
-                            z2m_topic_update("rename", udt_name, udt_z2m_topic);
-                            break;
-                        }
-                    }
-                }
-            }
+            // else if (topic == '')
         }
-        // else if (topic == '')
+        catch(err){
+            console.log("〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓")
+            console.log("blank mqtt message(payload) response")
+           // console.log("message = ", message)
+           // console.log("err type = ", err)
+            console.log("〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓")
+        }
     });
 }
 // module.exports = mqtt_connect;

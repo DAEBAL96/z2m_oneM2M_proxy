@@ -1,0 +1,35 @@
+homeassistant: false
+permit_join: true
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://192.168.50.58:1883
+  output: json
+  legacy_api: true
+serial:
+  port: /dev/ttyACM0
+advanced:
+  network_key:
+    - 200
+    - 100
+    - 45
+    - 28
+    - 39
+    - 3
+    - 138
+    - 187
+    - 5
+    - 81
+    - 188
+    - 173
+    - 49
+    - 231
+    - 131
+    - 196
+frontend: true
+devices:
+  '0x00158d0004abc775':
+    friendly_name: door_sensor
+  '0x00158d00053dfa85':
+    friendly_name: hu
+  '0x00158d00044e8f82':
+    friendly_name: sw_sensor1

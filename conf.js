@@ -58,7 +58,6 @@ ae.bodytype     = 'json'; // select 'json' or 'xml' or 'cbor'
 ae.tasport      = '3105';
 
 // build cnt conf
-// z2m_conf 가져가서 devices length 만큼 반복문 돌려서 cnt_arr 만들기
 var cnt_count = 0;
 z2m_device_list = Object.keys(z2m_conf.device_list);
 while (cnt_count < z2m_device_list.length){

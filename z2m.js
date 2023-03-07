@@ -1,6 +1,5 @@
 var z2m_conf_init = require('./z2m_conf_init.js');
 var Onem2mClient = require('./onem2m_client');
-var thyme_tas = require('./thyme_tas');
 var mqtt = require("mqtt");
 
 
@@ -8,8 +7,67 @@ var z2m_conf = z2m_conf_init();
 let z2m_topic_list = {};
 let fs = require("fs");
 let yaml = require("js-yaml");
-const client = mqtt.connect(z2m_conf.mqtt_server);
-// const client = mqtt.connect("mqtt://localhost");
+const z2m_mqtt_client = mqtt.connect(z2m_conf.mqtt_server);
+// const z2m_mqtt_client = mqtt.connect("mqtt://localhost");
+
+
+
+/* set device control conf */
+
+
+
+//first key = sensor friend name
+//second key = sensor sensing state name
+//second value array = control state & value
+
+//if value -> typeof === number ->  
+let sensor = {    
+
+    "single_sw" : {
+        "click" : "single"
+        //"click" : [single", "double"]
+    },
+    "door_sensor" : {
+        "contact" : "true"
+        //"contact" : ["true", "false"] -> door는 false 되어야하는 것 아닌가?
+    },
+
+    "test_lumi" : {
+        "illuminance_lux" : {
+            "over_low" : 100
+            //"over_high" : 100,
+        }
+    }
+};
+
+
+
+//first key = actuator friend name
+//second key = actuator control state name
+//second value array = control state
+let act = {
+
+    /* set onoff act -> obj로 묶어서 분리*/
+    "led" : {
+        "state" : ["on", "off"] 
+    },    
+    "plug" : {
+        "state" : ["on", "off"]
+    }
+
+    /* set actuator */
+
+};
+
+let control_map = {             // from sensor : to act device
+    "test_lumi" : "led",
+    "single_sw" : "led"
+}
+
+
+/***************************/
+
+
 
 var options = {
     protocol: conf.useprotocol,
@@ -25,7 +83,6 @@ var options = {
 };
 
 var onem2m_client = new Onem2mClient(options);
-
 
 function ae_response_action(status, res_body, callback) {
     var aeid = res_body['m2m:ae']['aei'];
@@ -45,7 +102,7 @@ function create_cnt_all(count, callback) {
             console.log(rn)
             onem2m_client.create_cnt(parent, rn, count, function (rsc, res_body, count) {
                 if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
-                    create_cnt_all(++count, function (status, count) {  // 재귀 함수로 계속 count 늘려나감
+                    create_cnt_all(++count, function (status, count) { 
                         callback(status, count);
                     });
                 }
@@ -55,7 +112,7 @@ function create_cnt_all(count, callback) {
             });
         }
         else {
-            callback(2001, count); // 2001 반환하고, crtct 부분은 count++ 로 인해 count가 cnt.length 넘어서기에 함수 종료
+            callback(2001, count);
         }
     }
 }
@@ -160,8 +217,6 @@ function setup_resources(_status) {
         });
     }
     else if (_status === 'crtct') {
-        console.log("@@@@@@@@@@@@@@")
-        console.log("app.js에서의 crtct 부분")
         create_cnt_all(request_count, function (status, count) {
             if(status == 9999) {
                 console.log('[???} create container error!');
@@ -201,7 +256,7 @@ function setup_resources(_status) {
             else {
                 request_count = ++count;
                 if (conf.sub.length <= count) {
-                    thyme_tas.ready_for_tas();
+                    // thyme_tas.ready_for_tas();
 
                     setTimeout(setup_resources, 100, 'crtci');
                 }
@@ -257,7 +312,7 @@ function timer_upload(period, cnt_idx) {
 }
 
 
-/////////////////////////////////////////////////////////////////////////////////////
+/**************************************************************************************/
 
 function init_topic_list(){
     var z2m_device_payload_topic = [];
@@ -276,19 +331,20 @@ function init_topic_list(){
     // return z2m_topic_list;
 }
 
+
 function z2m_topic_update(udt_type, topic_type, udt_topic){ // topic_type = "device" , "event" , {"from" : , "to" : }
 
     if(udt_type == "add"){
         if(topic_type == "device"){
             z2m_topic_list.device_topic.push(udt_topic);
-            client.subscribe(udt_topic);
+            z2m_mqtt_client.subscribe(udt_topic);
             console.log(udt_topic, "- device & mqtt broker topic add");
             console.log(z2m_topic_list)
         }
         else if(topic_type == "event"){
             console.log(udt_topic, "- device & mqtt broker topic add");
             // z2m_topic_list.event_topic.push(new_topic);
-            client.subscribe(udt_topic);
+            z2m_mqtt_client.subscribe(udt_topic);
         }
     }
 
@@ -296,7 +352,7 @@ function z2m_topic_update(udt_type, topic_type, udt_topic){ // topic_type = "dev
         z2m_topic_list.device_topic = z2m_topic_list.device_topic.filter(element => element !== topic_type.from)
 	z2m_topic_list.device_topic.push(udt_topic);
         console.log(udt_topic, "- device & mqtt broker topic rename");
-        client.subscribe(udt_topic);    
+        z2m_mqtt_client.subscribe(udt_topic);    
         console.log(z2m_topic_list)
     }
 
@@ -309,11 +365,95 @@ function z2m_topic_update(udt_type, topic_type, udt_topic){ // topic_type = "dev
 
 function z2m_topic_init_sub(z2m_topic_list){
     for (var i = 0; i< z2m_topic_list.device_topic.length; i++){
-        client.subscribe(z2m_topic_list.device_topic[i])
+        z2m_mqtt_client.subscribe(z2m_topic_list.device_topic[i])
     };
     for (var i = 0; i< z2m_topic_list.event_topic.length; i++){
-        client.subscribe(z2m_topic_list.event_topic[i])
+        z2m_mqtt_client.subscribe(z2m_topic_list.event_topic[i])
     };
+}
+
+function device_control(){
+
+
+}
+
+let z2m_toggle_control = (target_act, target_sensor, sensing_value) => {              
+    
+    try{                // binary act = only one state => [0]
+                        // actuator = more than one state => [0]..[1]..[2]. => act[target].length > 1
+
+        let target_set_topic = z2m_conf.base_topic +"/"+ target_act + "/set";
+        let control_state_key = Object.keys(act[target_act])[0];         //"state"
+        let act_value = act[target_act][control_state_key];              //["on", "off"]
+        let sensor_state_key = Object.keys(sensor[target_sensor])[0];    //click
+        let sensor_trigger = sensor[target_act][sensor_state_key];
+
+        if(act_value.length === 2){     // onoff act
+            let control_payload = {}
+            if(sensor_trigger === sensing_value){
+
+            }
+            
+        }
+
+        else if(act_value.length > 2){           // act type = actuator
+
+        }
+    }
+    
+    catch(err){
+        console.log(err)
+        console.log("device control error - control type toggle")
+    }
+}
+
+let z2m_threshold_control = (target_act, target_sensor, sensing_value) => {
+    try{
+        let target_set_topic = z2m_conf.base_topic +"/"+ target_act + "/set"
+        let control_state_key = Object.keys(act[target_act])[0]
+        let act_value = act[target_act][control_state_key]
+        let sensor_state_key = Object.keys(sensor[target_sensor])[0]
+        let sensor_thresholdtype = Object.keys(sensor[target_sensor][sensor_state_key])[0]
+        let sensor_threshold = sensor[target_sensor][sensor_state_key][sensor_thresholdtype]
+
+        if(act_value.length === 2){          // act type = onoff act
+            let control_payload = {}
+            if(sensor_thresholdtype === "over_high"){
+                if(sensing_value >= sensor_threshold){
+                    control_payload[control_state_key] = act_value[1];
+                    console.log("payload1 : ", control_payload)
+                    z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
+                }
+                else if(sensing_value < sensor_threshold){
+                    control_payload[control_state_key] = act_value[0];
+                    console.log("payload2 : ", control_payload)
+                    z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
+                }
+            }
+
+            else if(sensor_thresholdtype === "over_low"){
+                if(sensing_value <= sensor_threshold){
+                    control_payload[control_state_key] = act_value[0];
+                    console.log("payload3 : ", control_payload)
+                    z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
+                }
+                else if(sensing_value > sensor_threshold){
+                    control_payload[control_state_key] = act_value[1];
+                    console.log("payload4 : ", control_payload)
+                    z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
+                }
+            }     
+        }
+
+        else if(act_value.length > 2){           // act type = actuator
+
+        }
+    }
+
+    catch(err){
+        console.log(err)
+        console.log("device control error - control type threshold")
+    }
 }
 
 function mqtt_connect() {
@@ -321,34 +461,56 @@ function mqtt_connect() {
     console.log(z2m_topic_list)
     z2m_topic_init_sub(z2m_topic_list);
 
-    client.on("message", function (topic, message) {
+    z2m_mqtt_client.on("message", function (topic, message) {
         try{
-            console.log("message in -mqtt");
-            console.log("topic = ", topic);
-            console.log("message = ", message);
+            // console.log("message in - mqtt");
+            // console.log("topic = ", topic);
+            // console.log("message = ", message);
             mqtt_message_json = JSON.parse(message.toString());
-            if (z2m_topic_list.device_topic.includes(topic)){   // mqtt broker event type -> upload device payload  
+
+
+            if (z2m_topic_list.device_topic.includes(topic)){   // mqtt broker event type -> upload payload  
                 let payload_owner = (topic.split('/')).at(-1);
                 let device_list_IEEE = Object.keys(z2m_conf.device_list);
+
                 console.log("payload_owner = ", payload_owner)
+
+
+
                 for (var i = 0; i < device_list_IEEE.length; i ++){
                     if(z2m_conf.device_list[device_list_IEEE[i]] == payload_owner){
                         var rn = device_list_IEEE[i];
                         var parent = "/Mobius/" + z2m_conf.base_topic + "/" + rn;
                         onem2m_client.create_z2m_cin(parent, mqtt_message_json, function(rsc, res_body){
-                            // if (rsc == 5106 || rsc == 2001 || rsc == 4105){
-                            //     console.log("z2m device CSE joined complete");
-                            //     console.log(res_body);
-                            // }
                             console.log("response code = ", rsc)
                             console.log(res_body)
                             console.log("device payload(CNT - CIN) upload complete")
                         })
+
+                        /* device remote control */
+                        // if(Object.keys(control_map).includes(payload_owner)){
+                        if(control_map[payload_owner]){
+                            let sensing_key = Object.keys(sensor[payload_owner])[0]
+                            let target_act = control_map[payload_owner];
+                            let sensing_value = mqtt_message_json[sensing_key]
+
+                            if(typeof sensing_value === "number"){                       // type number -> threshold control
+                                z2m_threshold_control(target_act, payload_owner, sensing_value)
+                            }
+                            else if(typeof sensing_value === "string"){                  // type string -> toggle control
+                                z2m_toggle_control(target_act, payload_owner, sensing_value)
+                            }
+
+                        }
+                        /************************/
+
                         break;
                     } 
                 }
+
             }
     
+
             else if (z2m_topic_list.event_topic.includes(topic)){   // mqtt broker event type -> occur GW event
                 if (topic == z2m_conf.base_topic + "/bridge/event"){
                     if(mqtt_message_json.type == 'device_joined'){
@@ -379,7 +541,7 @@ function mqtt_connect() {
                         for(var count=0; count < fast_device_list.length; count++){
                             if(z2m_conf.device_list[fast_device_list[count]] == delete_target_cnt_lbl){
                                 target = "/Mobius/zigbee2mqtt/"+fast_device_list[count];
-                                console.log("remove 대상 : ", target);
+                                console.log("remove target : ", target);
                                 onem2m_client.delete_z2m_cnt(target, function(rsc, res_body){
                                     console.log(rsc);
                                     console.log(res_body);
@@ -401,12 +563,12 @@ function mqtt_connect() {
                         var update_lbl = mqtt_message_json.data.to;
                         var from_to_topic = {"from" : z2m_conf.base_topic + '/'+mqtt_message_json.data.from,
                                                 "to" : z2m_conf.base_topic + '/'+mqtt_message_json.data.to};
-                        console.log(current_device_list, "rename 동작 중");
+                        console.log(current_device_list, "rename using");
                         console.log(update_lbl);
                         for(var i=0; i < current_device_list.length; i++){
-                            if(z2m_conf.device_list[current_device_list[i]] == update_lbl){ // tree 방식으로 전환해보기
+                            if(z2m_conf.device_list[current_device_list[i]] == update_lbl){
                                 target = "/Mobius/zigbee2mqtt/"+ current_device_list[i];
-                                console.log("rename 대상 : ", target)
+                                console.log("rename target : ", target)
                                 onem2m_client.update_z2m_cnt(target, update_lbl, function (rsc, res_body){
                                     if (rsc == 5106 || rsc == 2001 || rsc == 4105){
                                         console.log("z2m device cnt update complete")
@@ -430,10 +592,11 @@ function mqtt_connect() {
         catch(err){
             console.log("〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓")
             console.log("blank mqtt message(payload) response")
-           // console.log("message = ", message)
-           // console.log("err type = ", err)
+            // console.log("message = ", message)
+            // console.log("err type = ", err)
             console.log("〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓〓")
         }
     });
 }
+
 // module.exports = mqtt_connect;

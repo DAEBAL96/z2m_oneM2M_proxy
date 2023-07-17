@@ -641,74 +641,6 @@ function coap_message_handler(request, response) {
     }
 }
 
-// var response_ws = function (connection, rsc, to, fr, rqi, inpc, bodytype) {
-//     var rsp_message = {};
-//     rsp_message['m2m:rsp'] = {};
-//     rsp_message['m2m:rsp'].rsc = rsc;
-//     rsp_message['m2m:rsp'].to = to;
-//     rsp_message['m2m:rsp'].fr = fr;
-//     rsp_message['m2m:rsp'].rqi = rqi;
-//     rsp_message['m2m:rsp'].pc = inpc;
-//
-//     if(bodytype === 'xml') {
-//         rsp_message['m2m:rsp']['@'] = {
-//             "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-//             "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-//         };
-//
-//         var xmlString = js2xmlparser.parse("m2m:rsp", rsp_message['m2m:rsp']);
-//
-//         connection.sendUTF(xmlString.toString());
-//     }
-//     else if (bodytype ===  'cbor') {
-//         xmlString = cbor.encode(rsp_message['m2m:rsp']).toString('hex');
-//
-//         connection.sendUTF(xmlString.toString());
-//     }
-//     else { // 'json'
-//         connection.sendUTF(JSON.stringify(rsp_message['m2m:rsp']));
-//     }
-// };
-//
-// var ws_noti_action = function(connection, bodytype, jsonObj) {
-//     if (jsonObj != null) {
-//         var op = (jsonObj['m2m:rqp']['op'] == null) ? '' : jsonObj['m2m:rqp']['op'];
-//         var to = (jsonObj['m2m:rqp']['to'] == null) ? '' : jsonObj['m2m:rqp']['to'];
-//         var fr = (jsonObj['m2m:rqp']['fr'] == null) ? '' : jsonObj['m2m:rqp']['fr'];
-//         var rqi = (jsonObj['m2m:rqp']['rqi'] == null) ? '' : jsonObj['m2m:rqp']['rqi'];
-//         var pc = {};
-//         pc = (jsonObj['m2m:rqp']['pc'] == null) ? {} : jsonObj['m2m:rqp']['pc'];
-//
-//         if(pc['m2m:sgn']) {
-//             pc.sgn = {};
-//             pc.sgn = pc['m2m:sgn'];
-//             delete pc['m2m:sgn'];
-//         }
-//
-//         _this.parse_sgn(rqi, pc, function (path_arr, cinObj, rqi) {
-//             if(cinObj) {
-//                 if(cinObj.sud || cinObj.vrq) {
-//                     response_ws(connection, 2001, '', conf.ae.id, rqi, '', bodytype);
-//                 }
-//                 else {
-//                     response_ws(connection, 2001, '', conf.ae.id, rqi, '', bodytype);
-//
-//                     //console.log((cinObj.con != null ? cinObj.con : cinObj.content));
-//                     console.log('ws ' + bodytype + ' notification <----');
-//
-//
-//                     _this.emit('notification', path_arr.join('/'), cinObj);
-//                 }
-//             }
-//         });
-//     }
-//     else {
-//         console.log('[mqtt_noti_action] message is not noti');
-//     }
-// };
-
-
-///////////
 var crtae = function (parent, rn, api, callback) {
     if(onem2m_options.protocol === 'http') {
         var results_ae = {};
@@ -1049,210 +981,16 @@ var delae = function (target, callback) {
     }
 };
 
-var crtct = function(parent, rn, count, callback) {
-    if(onem2m_options.protocol === 'http') {
-        var results_ct = {};
-
-        var bodyString = '';
-        if (onem2m_options.bodytype === 'xml') {
-            results_ct.lbl = rn;
-            results_ct['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                "rn": rn
-            };
-
-            bodyString = js2xmlparser.parse("m2m:cnt", results_ct);
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].rn = rn;
-            results_ct['m2m:cnt'].lbl = [rn];
-            bodyString = cbor.encode(results_ct).toString('hex');
-            console.log(bodyString);
-        }
-        else {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].rn = rn;
-            results_ct['m2m:cnt'].lbl = [rn];
-            bodyString = JSON.stringify(results_ct);
-            console.log(bodyString);
-        }
-
-        http_request(parent, 'post', '3', bodyString, function (res, res_body) {
-            console.log(count + ' - ' + parent + '/' + rn + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
-            console.log(res_body);
-            callback(res.headers['x-m2m-rsc'], res_body, count);
-        });
-    }
-    else if(onem2m_options.protocol === 'mqtt') {
-        var rqi = shortid.generate();
-
-        callback_q[rqi] = callback;
-        count_q[rqi] = count;
-
-        resp_mqtt_ri_arr.push(rqi);
-        resp_mqtt_path_arr[rqi] = parent;
-
-        var req_message = {};
-        req_message['m2m:rqp'] = {};
-        req_message['m2m:rqp'].op = '1'; // create
-        req_message['m2m:rqp'].to = parent;
-        req_message['m2m:rqp'].fr = onem2m_options.aei;
-        req_message['m2m:rqp'].rqi = rqi;
-        req_message['m2m:rqp'].ty = '3'; // cnt
-        req_message['m2m:rqp'].pc = {};
-        req_message['m2m:rqp'].pc['m2m:cnt'] = {};
-        req_message['m2m:rqp'].pc['m2m:cnt'].rn = rn;
-        req_message['m2m:rqp'].pc['m2m:cnt'].lbl = [];
-        req_message['m2m:rqp'].pc['m2m:cnt'].lbl.push(rn);
-
-        if (onem2m_options.bodytype === 'xml') {
-            req_message['m2m:rqp']['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            req_message['m2m:rqp'].pc['m2m:cnt']['@'] = {"rn": rn};
-            delete req_message['m2m:rqp'].pc['m2m:cnt'].rn;
-
-            var bodyString = js2xmlparser.parse("m2m:rqp", req_message['m2m:rqp']);
-            console.log(bodyString);
-
-            mqtt_client.publish(req_topic, bodyString);
-
-            console.log(req_topic + ' (' + rqi + ' - xml) ---->');
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            bodyString = cbor.encode(req_message['m2m:rqp']).toString('hex');
-            mqtt_client.publish(req_topic, bodyString);
-            console.log(req_topic + ' (cbor) ' + bodyString + ' ---->');
-        }
-        else { // 'json'
-            mqtt_client.publish(req_topic, JSON.stringify(req_message['m2m:rqp']));
-
-            console.log(req_topic + ' (json) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
-        }
-    }
-    else if(onem2m_options.protocol === 'coap') {
-        var results_ct = {};
-
-        var bodyString = '';
-        if(onem2m_options.bodytype === 'xml') {
-            results_ct.lbl = rn;
-            results_ct['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                "rn": rn
-            };
-
-            bodyString = js2xmlparser.parse("m2m:cnt", results_ct);
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].rn = rn;
-            results_ct['m2m:cnt'].lbl = [rn];
-            bodyString = cbor.encode(results_ct).toString('hex');
-            console.log(bodyString);
-        }
-        else {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].rn = rn;
-            results_ct['m2m:cnt'].lbl = [rn];
-            bodyString = JSON.stringify(results_ct);
-        }
-
-        coap_request(parent, 'post', '3', bodyString, function (res, res_body) {
-            for (var idx in res.options) {
-                if (res.options.hasOwnProperty(idx)) {
-                    if (res.options[idx].name === '265') { // 'X-M2M-RSC
-                        var rsc = (Buffer.isBuffer(res.options[idx].value) ? res.options[idx].value.readUInt16BE(0).toString() : res.options[idx].value.toString());
-                        break;
-                    }
-                }
-            }
-            console.log(count + ' - ' + parent + '/' + rn + ' - x-m2m-rsc : ' + rsc + ' <----');
-            callback(rsc, res_body, count);
-        });
-    }
-    else if(onem2m_options.protocol === 'ws') {
-        rqi = shortid.generate();
-
-        callback_q[rqi] = callback;
-        count_q[rqi] = count;
-
-        resp_mqtt_ri_arr.push(rqi);
-        resp_mqtt_path_arr[rqi] = parent;
-
-        req_message = {};
-        req_message['m2m:rqp'] = {};
-        req_message['m2m:rqp'].op = '1'; // create
-        req_message['m2m:rqp'].to = parent;
-        req_message['m2m:rqp'].fr = onem2m_options.aei;
-        req_message['m2m:rqp'].rqi = rqi;
-        req_message['m2m:rqp'].ty = '3'; // cnt
-        req_message['m2m:rqp'].pc = {};
-        req_message['m2m:rqp'].pc['m2m:cnt'] = {};
-        req_message['m2m:rqp'].pc['m2m:cnt'].rn = rn;
-        req_message['m2m:rqp'].pc['m2m:cnt'].lbl = [];
-        req_message['m2m:rqp'].pc['m2m:cnt'].lbl.push(rn);
-
-        if (onem2m_options.bodytype === 'xml') {
-            req_message['m2m:rqp']['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            req_message['m2m:rqp'].pc['m2m:cnt']['@'] = {"rn": rn};
-            delete req_message['m2m:rqp'].pc['m2m:cnt'].rn;
-
-            bodyString = js2xmlparser.parse("m2m:rqp", req_message['m2m:rqp']);
-
-            ws_connection.sendUTF(bodyString);
-            console.log('websocket (xml) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            bodyString = cbor.encode(req_message['m2m:rqp']).toString('hex');
-            console.log(bodyString);
-            ws_connection.sendUTF(bodyString);
-            console.log('websocket (cbor) ' + bodyString + ' ---->');
-        }
-        else { // 'json'
-            ws_connection.sendUTF(JSON.stringify(req_message['m2m:rqp']));
-            console.log('websocket (json) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
-        }
-    }
-};
-
 var z2m_crtct = function(parent, rn) {
     if(onem2m_options.protocol === 'http') {
         var results_ct = {};
 
         var bodyString = '';
-        if (onem2m_options.bodytype === 'xml') {
-            results_ct.lbl = rn;
-            results_ct['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                "rn": rn
-            };
-
-            bodyString = js2xmlparser.parse("m2m:cnt", results_ct);
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].rn = rn;
-            results_ct['m2m:cnt'].lbl = [rn];
-            bodyString = cbor.encode(results_ct).toString('hex');
-            console.log(bodyString);
-        }
-        else {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].rn = rn;
-            results_ct['m2m:cnt'].lbl = [rn];
-            bodyString = JSON.stringify(results_ct);
-            console.log(bodyString);
-        }
+        results_ct['m2m:cnt'] = {};
+        results_ct['m2m:cnt'].rn = rn;
+        results_ct['m2m:cnt'].lbl = [rn];
+        bodyString = JSON.stringify(results_ct);
+        console.log(bodyString);
 
         http_request(parent, 'post', '3', bodyString, function (res, res_body) {
             console.log(' - ' + parent + '/' + rn + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
@@ -1261,8 +999,63 @@ var z2m_crtct = function(parent, rn) {
     }
 };
 
+let z2m_crtfcnt_device = function(parent, rn, device_type){ // device_type 받고 여기서 cnd 분배 parent = AE 링크로 받고 끝은 / 없이
+                                                            // ex) http://localhost:7579/Mobius/sdt_ae
+    let cnd = "org.onem2m.home.device." + device_type
+    if(onem2m_options.protocol === 'http') {
+        let results_ct = {};
+        let bodyString = '';
+        
+        results_ct['m2m:fcnt'] = {};
+        results_ct['m2m:fcnt'].rn = rn;
+        results_ct['m2m:fcnt'].cnd = cnd
+        bodyString = JSON.stringify(results_ct);
+        console.log(bodyString);
 
-var rtvct = function(target, count, callback) {
+        http_request(parent, 'post', '28', bodyString, function (res, res_body) {
+            console.log(' - ' + parent + '/' + rn + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
+            console.log(res_body);
+        });
+    }
+};
+
+var z2m_crtfcnt_module = function(parent, rn, module_type){ // module_type 받고 여기서 cnd 분배
+    if(onem2m_options.protocol === 'http') {
+        var results_ct = {};
+
+        var bodyString = '';
+        if (onem2m_options.bodytype === 'xml') {
+            results_ct.lbl = rn;
+            results_ct['@'] = {
+                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
+                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                "rn": rn
+            };
+
+            bodyString = js2xmlparser.parse("m2m:cnt", results_ct);
+        }
+        else if(onem2m_options.bodytype === 'cbor') {
+            results_ct['m2m:fcnt'] = {};
+            results_ct['m2m:fcnt'].rn = rn;
+            bodyString = cbor.encode(results_ct).toString('hex');
+            console.log(bodyString);
+        }
+        else {
+            results_ct['m2m:fcnt'] = {};
+            results_ct['m2m:fcnt'].rn = rn;
+            bodyString = JSON.stringify(results_ct);
+            console.log(bodyString);
+        }
+
+        http_request(parent, 'post', '28', bodyString, function (res, res_body) {
+            console.log(' - ' + parent + '/' + rn + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
+            console.log(res_body);
+        });
+    }
+};
+
+
+var z2m_rtvct = function(target, count, callback) {
     if(onem2m_options.protocol === 'http') {
         http_request(target, 'get', '', '', function (res, res_body) {
             console.log(count + ' - ' + target + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
@@ -1354,47 +1147,6 @@ var rtvct = function(target, count, callback) {
 };
 
 
-var udtct = function(target, lbl, count, callback) {
-    if(onem2m_options.protocol === 'http') {
-        var results_ct = {};
-        var bodyString = '';
-        if (onem2m_options.bodytype === 'xml') {
-            results_ct.lbl = lbl;
-            results_ct['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            bodyString = js2xmlparser.parse("m2m:cnt", results_ct);
-        }
-        else if (onem2m_options.bodytype === 'cbor') {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].lbl = lbl;
-            bodyString = cbor.encode(results_ct).toString('hex');
-            console.log(bodyString);
-        }
-        else {
-            results_ct['m2m:cnt'] = {};
-            results_ct['m2m:cnt'].lbl = lbl;
-            bodyString = JSON.stringify(results_ct);
-        }
-        
-        http_request(target, 'put', '', bodyString, function (res, res_body) {
-            console.log(count + ' - ' + target + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
-            callback(res.headers['x-m2m-rsc'], res_body, count);
-        });
-    }
-    else if(onem2m_options.protocol === 'mqtt') {
-        // to do
-    }
-    else if(onem2m_options.protocol === 'coap') {
-        // to do
-    }
-    else if(onem2m_options.protocol === 'ws') {
-        // to do
-    }
-};
-
 var z2m_udtct = function(target, lbl, callback) {
     console.log("udtct 이제 들어옴", lbl)
     if(onem2m_options.protocol === 'http') {
@@ -1441,11 +1193,37 @@ var z2m_udtct = function(target, lbl, callback) {
 };
 
 
-var delct = function(target, count, callback) {
+var z2m_udtfcnt_module = function(target, state, module_type, callback) { // state, module_type 받고 -> index 지정 후 value 입력 
     if(onem2m_options.protocol === 'http') {
-        http_request(target, 'delete', '', '', function (res, res_body) {
-            console.log(count + ' - ' + target + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
-            callback(res.headers['x-m2m-rsc'], res_body, count);
+        var results_ct = {};
+        var bodyString = '';
+        if (onem2m_options.bodytype === 'xml') {
+            results_ct.lbl = lbl;
+            results_ct['@'] = {
+                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
+                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            };
+
+            bodyString = js2xmlparser.parse("m2m:cnt", results_ct);
+            console.log(bodyString, '  type xml');
+        }
+        else if (onem2m_options.bodytype === 'cbor') {
+            results_ct['m2m:cnt'] = {};
+            results_ct['m2m:cnt'].lbl = lbl;
+            bodyString = cbor.encode(results_ct).toString('hex');
+            console.log(bodyString, '  type cbor');
+        }
+        else {
+            results_ct['m2m:cnt'] = {};
+            results_ct['m2m:cnt'].lbl = [lbl];
+            bodyString = JSON.stringify(results_ct);
+            console.log(bodyString, '  type JSON');
+            console.log(typeof bodyString)
+        }
+        
+        http_request(target, 'put', '', bodyString, function (res, res_body) {
+            console.log(' - ' + target + ' - x-m2m-rsc : ' + res.headers['x-m2m-rsc'] + ' <----');
+            callback(res.headers['x-m2m-rsc'], res_body);
         });
     }
     else if(onem2m_options.protocol === 'mqtt') {
@@ -1694,96 +1472,6 @@ var crtsub = function(parent, rn, nu, count, callback) {
         coap_server.on('request', coap_message_handler);
     }
     else if(url.parse(nu).protocol === 'ws') {
-        // to do
-        // if(_server == null) {
-        //     var http = require('http');
-        //     _server = http.createServer(function (request, response) {
-        //         console.log((new Date()) + ' Received request for ' + request.url);
-        //         response.writeHead(404);
-        //         response.end();
-        //     });
-        //
-        //     _server.listen(conf.ae.port, function () {
-        //         console.log((new Date()) + ' Server is listening on port ' + conf.ae.port);
-        //     });
-        //
-        //     var WebSocketServer = require('websocket').server;
-        //     var wsServer = new WebSocketServer({
-        //         httpServer: _server,
-        //         // You should not use autoAcceptConnections for production
-        //         // applications, as it defeats all standard cross-origin protection
-        //         // facilities built into the protocol and the browser.  You should
-        //         // *always* verify the connection's origin and decide whether or not
-        //         // to accept it.
-        //         autoAcceptConnections: false
-        //     });
-        //
-        //     function originIsAllowed(origin) {
-        //         // put logic here to detect whether the specified origin is allowed.
-        //         return true;
-        //     }
-        //
-        //     wsServer.on('request', function (request) {
-        //         if (!originIsAllowed(request.origin)) {
-        //             // Make sure we only accept requests from an allowed origin
-        //             request.reject();
-        //             console.log((new Date()) + ' Connection from origin ' + request.origin + ' rejected.');
-        //             return;
-        //         }
-        //
-        //         for (var index in request.requestedProtocols) {
-        //             if(request.requestedProtocols.hasOwnProperty(index)) {
-        //                 if(request.requestedProtocols[index] === 'onem2m.r2.0.json') {
-        //                     var connection = request.accept('onem2m.r2.0.json', request.origin);
-        //                     console.log((new Date()) + ' Connection accepted. (json)');
-        //                     connection.on('message', function (message) {
-        //                         if (message.type === 'utf8') {
-        //                             console.log(message.utf8Data.toString());
-        //
-        //                             var jsonObj = JSON.parse(message.utf8Data.toString());
-        //
-        //                             if (jsonObj['m2m:rqp'] == null) {
-        //                                 jsonObj['m2m:rqp'] = jsonObj;
-        //                             }
-        //                             ws_noti_action(connection, 'json', jsonObj);
-        //                         }
-        //                         else if (message.type === 'binary') {
-        //                         }
-        //                     });
-        //                     connection.on('close', function (reasonCode, description) {
-        //                         console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
-        //                     });
-        //                     break;
-        //                 }
-        //                 else if(request.requestedProtocols[index] === 'onem2m.r2.0.xml') {
-        //                     connection = request.accept('onem2m.r2.0.xml', request.origin);
-        //                     console.log((new Date()) + ' Connection accepted. (xml)');
-        //                     connection.on('message', function (message) {
-        //                         if (message.type === 'utf8') {
-        //                             console.log(message.utf8Data.toString());
-        //
-        //                             var parser = new xml2js.Parser({explicitArray: false});
-        //                             parser.parseString(message.utf8Data.toString(), function (err, jsonObj) {
-        //                                 if (err) {
-        //                                     console.log('[ws noti xml2js parser error]');
-        //                                 }
-        //                                 else {
-        //                                     ws_noti_action(connection, 'xml', jsonObj);
-        //                                 }
-        //                             });
-        //                         }
-        //                         else if (message.type === 'binary') {
-        //                         }
-        //                     });
-        //                     connection.on('close', function (reasonCode, description) {
-        //                         console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
-        //                     });
-        //                     break;
-        //                 }
-        //             }
-        //         }
-        //     });
-        // }
     }
 };
 
@@ -1874,164 +1562,6 @@ var delsub = function(target, count, callback) {
             };
 
             bodyString = js2xmlparser.parse("m2m:rqp", req_message['m2m:rqp']);
-
-            ws_connection.sendUTF(bodyString);
-            console.log('websocket (xml) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            bodyString = cbor.encode(req_message['m2m:rqp']).toString('hex');
-            console.log(bodyString);
-            ws_connection.sendUTF(bodyString);
-            console.log('websocket (cbor) ' + bodyString + ' ---->');
-        }
-        else { // 'json'
-            ws_connection.sendUTF(JSON.stringify(req_message['m2m:rqp']));
-            console.log('websocket (json) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
-        }
-    }
-};
-
-
-var crtci = function(parent, count, content, socket, callback) {
-    if(onem2m_options.protocol === 'http') {
-        var results_ci = {};
-        var bodyString = '';
-        if (onem2m_options.bodytype === 'xml') {
-            results_ci.con = content;
-
-            results_ci['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            bodyString = js2xmlparser.parse("m2m:cin", results_ci);
-        }
-        else if (onem2m_options.bodytype === 'cbor') {
-            results_ci['m2m:cin'] = {};
-            results_ci['m2m:cin'].con = content;
-            bodyString = cbor.encode(results_ci).toString('hex');
-            console.log(bodyString);
-        }
-        else {
-            results_ci['m2m:cin'] = {};
-            results_ci['m2m:cin'].con = content;
-
-            bodyString = JSON.stringify(results_ci);
-        }
-
-        http_request(parent, 'post', '4', bodyString, function (res, res_body) {
-            callback(res.headers['x-m2m-rsc'], res_body, parent, socket);
-        });
-    }
-    else if(onem2m_options.protocol === 'mqtt') {
-        var rqi = shortid.generate();
-
-        callback_q[rqi] = callback;
-
-        resp_mqtt_ri_arr.push(rqi);
-        resp_mqtt_path_arr[rqi] = parent;
-        socket_q[rqi] = socket;
-
-        var req_message = {};
-        req_message['m2m:rqp'] = {};
-        req_message['m2m:rqp'].op = '1'; // create
-        req_message['m2m:rqp'].to = parent;
-        req_message['m2m:rqp'].fr = onem2m_options.aei;
-        req_message['m2m:rqp'].rqi = rqi;
-        req_message['m2m:rqp'].ty = '4'; // cin
-        req_message['m2m:rqp'].pc = {};
-        req_message['m2m:rqp'].pc['m2m:cin'] = {};
-        req_message['m2m:rqp'].pc['m2m:cin'].con = content;
-
-        if (onem2m_options.bodytype === 'xml') {
-            req_message['m2m:rqp']['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            var bodyString = js2xmlparser.parse("m2m:rqp", req_message['m2m:rqp']);
-            console.log(bodyString);
-
-            mqtt_client.publish(req_topic, bodyString);
-
-            console.log(req_topic + ' (' + rqi + ' - xml) ---->');
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            bodyString = cbor.encode(req_message['m2m:rqp']).toString('hex');
-            mqtt_client.publish(req_topic, bodyString);
-            console.log(req_topic + ' (cbor) ' + bodyString + ' ---->');
-        }
-        else { // 'json'
-            mqtt_client.publish(req_topic, JSON.stringify(req_message['m2m:rqp']));
-
-            console.log(req_topic + ' (json) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
-        }
-    }
-    else if(onem2m_options.protocol === 'coap') {
-        results_ci = {};
-        bodyString = '';
-        if(onem2m_options.bodytype === 'xml') {
-            results_ci.con = content;
-
-            results_ci['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            bodyString = js2xmlparser.parse("m2m:cin", results_ci);
-        }
-        else if(onem2m_options.bodytype === 'cbor') {
-            results_ci['m2m:cin'] = {};
-            results_ci['m2m:cin'].con = content;
-            bodyString = cbor.encode(results_ci).toString('hex');
-            console.log(bodyString);
-        }
-        else {
-            results_ci['m2m:cin'] = {};
-            results_ci['m2m:cin'].con = content;
-
-            bodyString = JSON.stringify(results_ci);
-        }
-
-        coap_request(parent, 'post', '4', bodyString, function (res, res_body) {
-            for (var idx in res.options) {
-                if (res.options.hasOwnProperty(idx)) {
-                    if (res.options[idx].name === '265' || (res.options[idx].name === 265)) { // 'X-M2M-RSC
-                        var rsc = (Buffer.isBuffer(res.options[idx].value) ? res.options[idx].value.readUInt16BE(0).toString() : res.options[idx].value.toString());
-                        break;
-                    }
-                }
-            }
-            callback(rsc, res_body, parent, socket);
-        });
-    }
-    else if(onem2m_options.protocol === 'ws') {
-        rqi = shortid.generate();
-
-        callback_q[rqi] = callback;
-
-        resp_mqtt_ri_arr.push(rqi);
-        resp_mqtt_path_arr[rqi] = parent;
-        socket_q[rqi] = socket;
-
-        req_message = {};
-        req_message['m2m:rqp'] = {};
-        req_message['m2m:rqp'].op = '1'; // create
-        req_message['m2m:rqp'].to = parent;
-        req_message['m2m:rqp'].fr = onem2m_options.aei;
-        req_message['m2m:rqp'].rqi = rqi;
-        req_message['m2m:rqp'].ty = '4'; // cin
-        req_message['m2m:rqp'].pc = {};
-        req_message['m2m:rqp'].pc['m2m:cin'] = {};
-        req_message['m2m:rqp'].pc['m2m:cin'].con = content;
-
-        if (onem2m_options.bodytype === 'xml') {
-            req_message['m2m:rqp']['@'] = {
-                "xmlns:m2m": "http://www.onem2m.org/xml/protocols",
-                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
-            };
-
-            var bodyString = js2xmlparser.parse("m2m:rqp", req_message['m2m:rqp']);
 
             ws_connection.sendUTF(bodyString);
             console.log('websocket (xml) ' + JSON.stringify(req_message['m2m:rqp']) + ' ---->');
@@ -2424,21 +1954,22 @@ proto.retrieve_ae = rtvae;
 proto.update_ae = udtae;
 proto.delete_ae = delae;
 
-proto.create_cnt = crtct;
 proto.create_z2m_cnt = z2m_crtct;
-
-proto.retrieve_cnt = rtvct;
-
-proto.update_cnt = udtct;
+proto.retrieve_z2m_cnt = z2m_rtvct;
 proto.update_z2m_cnt = z2m_udtct;
-
-proto.delete_cnt = delct;
 proto.delete_z2m_cnt = z2m_delct;
 
 proto.create_sub = crtsub;
 proto.delete_sub = delsub;
 
-proto.create_cin = crtci;
 proto.create_z2m_cin = z2m_crtci;
+
+proto.create_z2m_fcnt_device = z2m_crtfcnt_device; // parent, rn, device_type
+proto.update_z2m_fcnt_device = z2m_udtfcnt_device;
+proto.delete_z2m_fcnt_device = z2m_delfcnt_device;
+
+proto.create_z2m_fcnt_module = z2m_crtfcnt_module; // parent, rn, module_type
+proto.update_z2m_fcnt_module = z2m_udtfcnt_module; // target, state, module_type, callback
+proto.delete_z2m_fcnt_module = z2m_delfcnt_module;
 
 module.exports = Onem2mClient;

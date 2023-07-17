@@ -100,193 +100,193 @@ var options = {
 
 var onem2m_client = new Onem2mClient(options);
 
-function ae_response_action(status, res_body, callback) {
-    var aeid = res_body['m2m:ae']['aei'];
-    conf.ae.id = aeid;
-    callback(status, aeid);
-}
+// function ae_response_action(status, res_body, callback) {
+//     var aeid = res_body['m2m:ae']['aei'];
+//     conf.ae.id = aeid;
+//     callback(status, aeid);
+// }
 
-function create_cnt_all(count, callback) {
-    if(conf.cnt.length == 0) {
-        callback(2001, count);
-    }
-    else {
-        if(conf.cnt.hasOwnProperty(count)) {
-            var parent = conf.cnt[count].parent;
-            console.log(parent)
-            var rn = conf.cnt[count].name;
-            console.log(rn)
-            onem2m_client.create_cnt(parent, rn, count, function (rsc, res_body, count) {
-                if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
-                    create_cnt_all(++count, function (status, count) { 
-                        callback(status, count);
-                    });
-                }
-                else {
-                    callback(9999, count);
-                }
-            });
-        }
-        else {
-            callback(2001, count);
-        }
-    }
-}
+// function create_cnt_all(count, callback) {
+//     if(conf.cnt.length == 0) {
+//         callback(2001, count);
+//     }
+//     else {
+//         if(conf.cnt.hasOwnProperty(count)) {
+//             var parent = conf.cnt[count].parent;
+//             console.log(parent)
+//             var rn = conf.cnt[count].name;
+//             console.log(rn)
+//             onem2m_client.create_cnt(parent, rn, count, function (rsc, res_body, count) {
+//                 if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
+//                     create_cnt_all(++count, function (status, count) { 
+//                         callback(status, count);
+//                     });
+//                 }
+//                 else {
+//                     callback(9999, count);
+//                 }
+//             });
+//         }
+//         else {
+//             callback(2001, count);
+//         }
+//     }
+// }
 
-function delete_sub_all(count, callback) {
-    if(conf.sub.length == 0) {
-        callback(2001, count);
-    }
-    else {
-        if(conf.sub.hasOwnProperty(count)) {
-            var target = conf.sub[count].parent + '/' + conf.sub[count].name;
-            onem2m_client.delete_sub(target, count, function (rsc, res_body, count) {
-                if (rsc == 5106 || rsc == 2002 || rsc == 2000 || rsc == 4105 || rsc == 4004) {
-                    delete_sub_all(++count, function (status, count) {
-                        callback(status, count);
-                    });
-                }
-                else {
-                    callback(9999, count);
-                }
-            });
-        }
-        else {
-            callback(2001, count);
-        }
-    }
-}
+// function delete_sub_all(count, callback) {
+//     if(conf.sub.length == 0) {
+//         callback(2001, count);
+//     }
+//     else {
+//         if(conf.sub.hasOwnProperty(count)) {
+//             var target = conf.sub[count].parent + '/' + conf.sub[count].name;
+//             onem2m_client.delete_sub(target, count, function (rsc, res_body, count) {
+//                 if (rsc == 5106 || rsc == 2002 || rsc == 2000 || rsc == 4105 || rsc == 4004) {
+//                     delete_sub_all(++count, function (status, count) {
+//                         callback(status, count);
+//                     });
+//                 }
+//                 else {
+//                     callback(9999, count);
+//                 }
+//             });
+//         }
+//         else {
+//             callback(2001, count);
+//         }
+//     }
+// }
 
-function create_sub_all(count, callback) {
-    if(conf.sub.length == 0) {
-        callback(2001, count);
-    }
-    else {
-        if(conf.sub.hasOwnProperty(count)) {
-            var parent = conf.sub[count].parent;
-            var rn = conf.sub[count].name;
-            var nu = conf.sub[count].nu;
-            onem2m_client.create_sub(parent, rn, nu, count, function (rsc, res_body, count) {
-                if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
-                    create_sub_all(++count, function (status, count) {
-                        callback(status, count);
-                    });
-                }
-                else {
-                    callback('9999', count);
-                }
-            });
-        }
-        else {
-            callback(2001, count);
-        }
-    }
-}
+// function create_sub_all(count, callback) {
+//     if(conf.sub.length == 0) {
+//         callback(2001, count);
+//     }
+//     else {
+//         if(conf.sub.hasOwnProperty(count)) {
+//             var parent = conf.sub[count].parent;
+//             var rn = conf.sub[count].name;
+//             var nu = conf.sub[count].nu;
+//             onem2m_client.create_sub(parent, rn, nu, count, function (rsc, res_body, count) {
+//                 if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
+//                     create_sub_all(++count, function (status, count) {
+//                         callback(status, count);
+//                     });
+//                 }
+//                 else {
+//                     callback('9999', count);
+//                 }
+//             });
+//         }
+//         else {
+//             callback(2001, count);
+//         }
+//     }
+// }
 
-setTimeout(setup_resources, 100, 'crtae');
+// setTimeout(setup_resources, 100, 'crtae');
 
-function setup_resources(_status) {
-    sh_state = _status;
+// function setup_resources(_status) {
+//     sh_state = _status;
     
-    console.log('[status] : ' + _status);
+//     console.log('[status] : ' + _status);
 
-    if (_status === 'crtae') {
-        onem2m_client.create_ae(conf.ae.parent, conf.ae.name, conf.ae.appid, function (status, res_body) {
-            console.log(res_body);
-            if (status == 2001) {
-                ae_response_action(status, res_body, function (status, aeid) {
-                    console.log('x-m2m-rsc : ' + status + ' - ' + aeid + ' <----');
-                    request_count = 0;
+//     if (_status === 'crtae') {
+//         onem2m_client.create_ae(conf.ae.parent, conf.ae.name, conf.ae.appid, function (status, res_body) {
+//             console.log(res_body);
+//             if (status == 2001) {
+//                 ae_response_action(status, res_body, function (status, aeid) {
+//                     console.log('x-m2m-rsc : ' + status + ' - ' + aeid + ' <----');
+//                     request_count = 0;
 
-                    setTimeout(setup_resources, 100, 'rtvae');
-                });
-            }
-            else if (status == 5106 || status == 4105) {
-                console.log('x-m2m-rsc : ' + status + ' <----');
+//                     setTimeout(setup_resources, 100, 'rtvae');
+//                 });
+//             }
+//             else if (status == 5106 || status == 4105) {
+//                 console.log('x-m2m-rsc : ' + status + ' <----');
 
-                setTimeout(setup_resources, 100, 'rtvae');
-            }
-            else {
-                console.log('[???} create container error!  ', status + ' <----');
-                // setTimeout(setup_resources, 3000, 'crtae');
-            }
-        });
-    }
-    else if (_status === 'rtvae') {
-        onem2m_client.retrieve_ae(conf.ae.parent + '/' + conf.ae.name, function (status, res_body) {
-            if (status == 2000) {
-                var aeid = res_body['m2m:ae']['aei'];
-                console.log('x-m2m-rsc : ' + status + ' - ' + aeid + ' <----');
+//                 setTimeout(setup_resources, 100, 'rtvae');
+//             }
+//             else {
+//                 console.log('[???} create container error!  ', status + ' <----');
+//                 // setTimeout(setup_resources, 3000, 'crtae');
+//             }
+//         });
+//     }
+//     else if (_status === 'rtvae') {
+//         onem2m_client.retrieve_ae(conf.ae.parent + '/' + conf.ae.name, function (status, res_body) {
+//             if (status == 2000) {
+//                 var aeid = res_body['m2m:ae']['aei'];
+//                 console.log('x-m2m-rsc : ' + status + ' - ' + aeid + ' <----');
 
-                if(conf.ae.id != aeid && conf.ae.id != ('/'+aeid)) {
-                    console.log('AE-ID created is ' + aeid + ' not equal to device AE-ID is ' + conf.ae.id);
-                }
-                else {
-                    request_count = 0;
-                    setTimeout(setup_resources, 100, 'crtct');
-                }
-            }
-            else {
-                console.log('x-m2m-rsc : ' + status + ' <----');
-                // setTimeout(setup_resources, 3000, 'rtvae');
-            }
-        });
-    }
-    else if (_status === 'crtct') {
-        create_cnt_all(request_count, function (status, count) {
-            if(status == 9999) {
-                console.log('[???} create container error!');
-                // setTimeout(setup_resources, 3000, 'crtct');
-            }
-            else {
-                request_count = ++count;
-                if (conf.cnt.length <= count) {
-                    console.log(conf.cnt, "conf.cnt list out line")
-                    request_count = 0;
-                    setTimeout(setup_resources, 100, 'delsub');
-                }
-            }
-        });
-    }
-    else if (_status === 'delsub') {
-        delete_sub_all(request_count, function (status, count) {
-            if(status == 9999) {
-                console.log('[???} create container error!');
-                // setTimeout(setup_resources, 3000, 'delsub');
-            }
-            else {
-                request_count = ++count;
-                if (conf.sub.length <= count) {
-                    request_count = 0;
-                    setTimeout(setup_resources, 100, 'crtsub');
-                }
-            }
-        });
-    }
-    else if (_status === 'crtsub') {
-        create_sub_all(request_count, function (status, count) {
-            if(status == 9999) {
-                console.log('[???} create container error!');
-                // setTimeout(setup_resources, 1000, 'crtsub');
-            }
-            else {
-                request_count = ++count;
-                if (conf.sub.length <= count) {
-                    // thyme_tas.ready_for_tas();
+//                 if(conf.ae.id != aeid && conf.ae.id != ('/'+aeid)) {
+//                     console.log('AE-ID created is ' + aeid + ' not equal to device AE-ID is ' + conf.ae.id);
+//                 }
+//                 else {
+//                     request_count = 0;
+//                     setTimeout(setup_resources, 100, 'crtct');
+//                 }
+//             }
+//             else {
+//                 console.log('x-m2m-rsc : ' + status + ' <----');
+//                 // setTimeout(setup_resources, 3000, 'rtvae');
+//             }
+//         });
+//     }
+//     else if (_status === 'crtct') {
+//         create_cnt_all(request_count, function (status, count) {
+//             if(status == 9999) {
+//                 console.log('[???} create container error!');
+//                 // setTimeout(setup_resources, 3000, 'crtct');
+//             }
+//             else {
+//                 request_count = ++count;
+//                 if (conf.cnt.length <= count) {
+//                     console.log(conf.cnt, "conf.cnt list out line")
+//                     request_count = 0;
+//                     setTimeout(setup_resources, 100, 'delsub');
+//                 }
+//             }
+//         });
+//     }
+//     else if (_status === 'delsub') {
+//         delete_sub_all(request_count, function (status, count) {
+//             if(status == 9999) {
+//                 console.log('[???} create container error!');
+//                 // setTimeout(setup_resources, 3000, 'delsub');
+//             }
+//             else {
+//                 request_count = ++count;
+//                 if (conf.sub.length <= count) {
+//                     request_count = 0;
+//                     setTimeout(setup_resources, 100, 'crtsub');
+//                 }
+//             }
+//         });
+//     }
+//     else if (_status === 'crtsub') {
+//         create_sub_all(request_count, function (status, count) {
+//             if(status == 9999) {
+//                 console.log('[???} create container error!');
+//                 // setTimeout(setup_resources, 1000, 'crtsub');
+//             }
+//             else {
+//                 request_count = ++count;
+//                 if (conf.sub.length <= count) {
+//                     // thyme_tas.ready_for_tas();
 
-                    setTimeout(setup_resources, 100, 'crtci');
-                }
-            }
-        });
-    }
-    else if (_status === 'crtci') {
-        if(conf.sim == 'enable') {
-            var period = 1000; //ms
-            var cnt_idx = 0;
-            setTimeout(timer_upload, 1000, period, cnt_idx);
-        }
-    }
-}
+//                     setTimeout(setup_resources, 100, 'crtci');
+//                 }
+//             }
+//         });
+//     }
+//     else if (_status === 'crtci') {
+//         if(conf.sim == 'enable') {
+//             var period = 1000; //ms
+//             var cnt_idx = 0;
+//             setTimeout(timer_upload, 1000, period, cnt_idx);
+//         }
+//     }
+// }
 
 onem2m_client.on('notification', function (source_uri, cinObj) {
     console.log(source_uri, cinObj);

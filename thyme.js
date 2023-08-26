@@ -8,8 +8,7 @@ global.socket_q = {};
 global.conf = require('./conf.js');
 global.z2m_conf = require('./z2m_conf_init.js');
 
-global.sh_state = 'crtae';
+global.sh_state = 'crtae'; // z2m oneM2M resource Tree initializing
 global.mqtt_client = null;
 
-
-require('./z2m');
+require('./z2m.js');

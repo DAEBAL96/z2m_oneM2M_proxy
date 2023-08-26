@@ -1,1 +1,9 @@
-{"base_topic":"zigbee2mqtt","mqtt_server":"mqtt://192.168.50.58:1883","device_list":{"0x00158d0004abc775":"door_sensor","0x00158d00053dfa85":"hu","0x00158d00044e8f82":"sw_sensor1"}}
+{
+    "base_topic": "zigbee2mqtt",
+    "mqtt_server": "mqtt://192.168.50.58:1883",
+    "device_list": {
+        "0x00158d0004abc775": "door_sensor",
+        "0x00158d00053dfa85": "hu",
+        "0x00158d00044e8f82": "sw_sensor1"
+    }
+}

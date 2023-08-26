@@ -33,10 +33,11 @@ var sub_arr = [];
 var acp = {};
 
 conf.useprotocol = 'http'; // select one for 'http' or 'mqtt' or 'coap' or 'ws'
+// --> 처리
 
-conf.sim = 'disable'; // enable / disable
+conf.sim = 'disable'; // enable / disable   --> 처리
 
-// build cse
+// configuration that to connect the cse resource
 cse.host        = 'localhost';
 cse.port        = '7579';
 cse.name        = 'Mobius';
@@ -44,13 +45,10 @@ cse.id          = '/Mobius2';
 cse.mqttport    = '1883';
 cse.wsport      = '7577';
 
-// build ae
+// configuration that to build the cse resource
 //ae.name         = 'zigbee2mqtt';
 ae.name         = z2m_conf.base_topic
-
-
 ae.id           = 'S'+ae.name;
-
 ae.parent       = '/' + cse.name;
 ae.appid        = 'zigbee.apid';
 ae.port         = '9727';

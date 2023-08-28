@@ -260,53 +260,53 @@ function setup_resources(_status) {
             }
         });
     }
-    else if (_status === 'crtci') {
-        if (conf.sim == 'enable') {
-            var period = 1000; //ms
-            var cnt_idx = 0;
-            setTimeout(timer_upload, 1000, period, cnt_idx);
-        }
-    }
+    // else if (_status === 'crtci') {
+    //     if (conf.sim == 'enable') {
+    //         var period = 1000; //ms
+    //         var cnt_idx = 0;
+    //         setTimeout(timer_upload, 1000, period, cnt_idx);
+    //     }
+    // }
 }
 
-onem2m_handler.on('notification', function (source_uri, cinObj) {
+// onem2m_handler.on('notification', function (source_uri, cinObj) {
 
-    console.log(source_uri, cinObj);
+//     console.log(source_uri, cinObj);
 
-    var path_arr = source_uri.split('/')
-    var event_cnt_name = path_arr[path_arr.length - 2];
-    var content = cinObj.con;
+//     var path_arr = source_uri.split('/')
+//     var event_cnt_name = path_arr[path_arr.length - 2];
+//     var content = cinObj.con;
 
-    if (event_cnt_name === 'co2') {
-        // send to tas
-        if (socket_arr[path_arr[path_arr.length - 2]] != null) {
-            socket_arr[path_arr[path_arr.length - 2]].write(JSON.stringify(content) + '<EOF>');
-        }
-    }
-});
+//     if (event_cnt_name === 'co2') {
+//         // send to tas
+//         if (socket_arr[path_arr[path_arr.length - 2]] != null) {
+//             socket_arr[path_arr[path_arr.length - 2]].write(JSON.stringify(content) + '<EOF>');
+//         }
+//     }
+// });
 
 mqtt_connect();
 
-var t_count = 0;
+// var t_count = 0;
 
-function timer_upload_action(cnt_idx, content, period) {
-    if (sh_state == 'crtci') {
-        var parent = conf.cnt[cnt_idx].parent + '/' + conf.cnt[cnt_idx].name;
-        onem2m_handler.create_cin(parent, cnt_idx, content, this, function (status, res_body, to, socket) {
-            console.log('x-m2m-rsc : ' + status + ' <----');
-        });
+// function timer_upload_action(cnt_idx, content, period) {
+//     if (sh_state == 'crtci') {
+//         var parent = conf.cnt[cnt_idx].parent + '/' + conf.cnt[cnt_idx].name;
+//         onem2m_handler.create_cin(parent, cnt_idx, content, this, function (status, res_body, to, socket) {
+//             console.log('x-m2m-rsc : ' + status + ' <----');
+//         });
 
-        setTimeout(timer_upload, 0, period, cnt_idx);
-    }
-    else {
-        setTimeout(timer_upload, 1000, period, cnt_idx);
-    }
-}
+//         setTimeout(timer_upload, 0, period, cnt_idx);
+//     }
+//     else {
+//         setTimeout(timer_upload, 1000, period, cnt_idx);
+//     }
+// }
 
-function timer_upload(period, cnt_idx) {
-    var content = JSON.stringify({ value: 'TAS' + t_count++ });
-    setTimeout(timer_upload_action, period, cnt_idx, content, period);
-}
+// function timer_upload(period, cnt_idx) {
+//     var content = JSON.stringify({ value: 'TAS' + t_count++ });
+//     setTimeout(timer_upload_action, period, cnt_idx, content, period);
+// }
 
 
 /**************************************************************************************/
@@ -368,16 +368,15 @@ function z2m_topic_init_sub(z2m_topic_list) {    // none CSE sub mqtt topic subs
     };
 }
 
-function device_control() {
 
+/* ************************device control with sub************************ */
+function device_control() {
 }
 
 let oneM2M_device_control = () => {  // control by oneM2M CSE resource
-
 }
 
 let dynamic_toggle_sensor = () => { // sensor controle type = none static sensor
-
 }
 
 let z2m_toggle_control = (target_act, target_sensor, sensing_value) => {
@@ -471,6 +470,8 @@ let z2m_threshold_control = (target_act, target_sensor, sensing_value) => {
         console.log("device control error - control type threshold")
     }
 }
+/* ************************************************************************ */
+
 
 function mqtt_connect() {
     init_topic_list();     //z2m_topic_list -> {"device_topic" : [], "event_topic" : []}
@@ -479,9 +480,6 @@ function mqtt_connect() {
 
     z2m_mqtt_client.on("message", function (topic, message) {
         try {
-            // console.log("message in - mqtt");
-            // console.log("topic = ", topic);
-            // console.log("message = ", message);
             mqtt_message_json = JSON.parse(message.toString());
 
             if (z2m_topic_list.device_topic.includes(topic)) {   // mqtt broker event type -> upload payload  
@@ -503,6 +501,7 @@ function mqtt_connect() {
                         /* device remote control */
                         // if(Object.keys(control_map).includes(payload_owner)){
                         // if) exist sensor's control mapping -> remote start 
+                        
                         if (control_map[payload_owner]) {
                             let sensing_key = Object.keys(sensor[payload_owner])[0]
                             let target_act = control_map[payload_owner];

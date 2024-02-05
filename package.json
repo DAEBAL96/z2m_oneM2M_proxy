@@ -13,7 +13,7 @@
         "ip": "^1.1.5",
         "js-yaml": "^4.1.0",
         "js2xmlparser": "^4.0.1",
-        "mqtt": "^4.3.7",
+        "mqtt": "^4.3.8",
         "node-gyp-build": "^4.2.3",
         "shortid": "^2.2.16",
         "websocket": "^1.0.34",

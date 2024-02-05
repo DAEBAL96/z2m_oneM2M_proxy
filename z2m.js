@@ -47,19 +47,25 @@ let sensor = {
 //second value array = control state
 let act = {
     /* set onoff act -> obj로 묶어서 분리*/
-    "led": {
-        "state": ["on", "off"]
-    },
+    // "led": {
+    //     "state": ["on", "off"]
+    // },
     "plug": {
         "state": ["on", "off"]
     }
     /* set actuator */
 };
 
+let act_latest_state = {
+    "plug": "off"
+}
+
+
 let control_map = {             // from sensor : to act device
-    "test_lumi": "led",
+    // "test_lumi": "led",
     "single_sw": "plug",
-    "double_sw": "plug"
+    "double_sw": "plug",
+    "lux_sensor": "plug"
 }
 
 /***************************/
@@ -273,39 +279,42 @@ let oneM2M_device_control = () => {  // control by oneM2M CSE resource
 let dynamic_toggle_sensor = () => { // sensor controle type = none static sensor
 }
 
-let z2m_toggle_control = (target_act, target_sensor, sensing_value) => {
+let z2m_toggle_control = (target_act, target_sensor, sensing_value) => {    // act=plug, sensor=sw, value=single.
 
     try {                // binary act = only one state => [0]
         // actuator = more than one state => [0]..[1]..[2]. => act[target].length > 1
 
         let target_set_topic = z2m_conf.base_topic + "/" + target_act + "/set";
+
         let control_state_key = Object.keys(act[target_act])[0];         //"state"
         let act_value = act[target_act][control_state_key];              //["on", "off"]
 
         let sensor_state_key = Object.keys(sensor[target_sensor])[0];    //click
-        let sensor_trigger = sensor[target_sensor][sensor_state_key];
+        let sensor_trigger = sensor[target_sensor][sensor_state_key];    //single or double.
 
         if (act_value.length === 2) {          // act type = onoff act
-            let control_payload = {}
+            let control_payload;
 
             if (typeof sensor_trigger === "string") { // one sensor_trigger 
-                if (sensing_value === sensor_trigger) {   // CSE에서 제일 최신 con 긁는다? -> cin 많을수록 http core에서 시간 많이걸림
-                    // module에 리소스 하나 할당해두고 거기에서 toggle 형식으로 바꾸기? -> init을 어케하지
-                    // init 할 때만 resource에서 긁어오고 그 값을 최신으로 넣을까
-                    // 해당 module 돌 때는 init 이지만 만약 센서 및 AE-cnt-cin이 존재하면?
-                    // ... .고려해야할 것 ㅈㄴ 많네
-                    console.log("toggle_control_payload1")
-                    // request로 받고 con값이랑 반대되는 값을 넣어주면 된다.
-                    z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
+                // if (sensing_value === sensor_trigger) {   // CSE에서 제일 최신 con 긁는다? -> cin 많을수록 http core에서 시간 많이걸림
+                // module에 리소스 하나 할당해두고 거기에서 toggle 형식으로 바꾸기? -> init을 어케하지
+                // init 할 때만 resource에서 긁어오고 그 값을 최신으로 넣을까
+                // 해당 module 돌 때는 init 이지만 만약 센서 및 AE-cnt-cin이 존재하면?
+                // ... .고려해야할 것 ㅈㄴ 많네
+                console.log("toggle_control_payload")
+                if (act_latest_state[target_act] == "off") {
+                    control_payload = '{"state" : "on"}';
+                    z2m_mqtt_client.publish(target_set_topic, control_payload)
+                    //z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
                 }
+                else if (act_latest_state[target_act] == "on") {
+                    control_payload = '{"state" : "on"}';
+                    z2m_mqtt_client.publish(target_set_topic, control_payload)
+                    //z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
+                }
+                // request로 받고 con값이랑 반대되는 값을 넣어주면 된다.
+                // }
             }
-            else if (typeof sensor_trigger === "object") { // many sensor_trigger
-                // need to trigger-action map 
-            }
-        }
-
-        else if (act_value.length > 2) {           // act type = actuator
-
         }
     }
 
@@ -387,6 +396,9 @@ function mqtt_connect() {
                         var rn = device_list_IEEE[i];
                         var parent = "/Mobius/" + z2m_conf.base_topic + "/" + rn;
                         onem2m_handler.create_z2m_cin(parent, mqtt_message_json, function (rsc, res_body) {
+                            if (act_latest_state[payload_owner]) {
+                                act_latest_state[payload_owner] = res_body["m2m:cin"]["con"]["state"];
+                            }
                             console.log("response code = ", rsc)
                             console.log(res_body)
                             console.log("device payload(CNT - CIN) upload complete")
@@ -397,22 +409,20 @@ function mqtt_connect() {
                         // if) exist sensor's control mapping -> remote start 
 
                         if (control_map[payload_owner]) {
-                            let sensing_key = Object.keys(sensor[payload_owner])[0]
-                            let target_act = control_map[payload_owner];
-                            let sensing_value = mqtt_message_json[sensing_key]
+                            let sensing_key = Object.keys(sensor[payload_owner])[0] // click, contact 등등... 
+                            let target_act = control_map[payload_owner];            // 동작 원하는 액츄에이터
+                            let sensing_value = mqtt_message_json[sensing_key]      // 센싱된 센싱 값
 
                             if (typeof sensing_value === "number") {                       // type number -> threshold control
                                 console.log("threshold sensor - start device control")
-                                z2m_threshold_control(target_act, payload_owner, sensing_value)
+                                // z2m_threshold_control(target_act, payload_owner, sensing_value)
                             }
                             else if (typeof sensing_value === "string") {                  // type string -> toggle control
                                 console.log("toggle sensor - start device control")
                                 z2m_toggle_control(target_act, payload_owner, sensing_value)
                             }
-
                         }
                         /************************/
-
                         break;
                     }
                 }

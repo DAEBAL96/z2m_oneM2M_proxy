@@ -114,56 +114,6 @@ function create_cnt_all(count, callback) {
     }
 }
 
-// function delete_sub_all(count, callback) {
-//     if (conf.sub.length == 0) {
-//         callback(2001, count);
-//     }
-//     else {
-//         if (conf.sub.hasOwnProperty(count)) {
-//             var target = conf.sub[count].parent + '/' + conf.sub[count].name;
-//             onem2m_handler.delete_sub(target, count, function (rsc, res_body, count) {
-//                 if (rsc == 5106 || rsc == 2002 || rsc == 2000 || rsc == 4105 || rsc == 4004) {
-//                     delete_sub_all(++count, function (status, count) {
-//                         callback(status, count);
-//                     });
-//                 }
-//                 else {
-//                     callback(9999, count);
-//                 }
-//             });
-//         }
-//         else {
-//             callback(2001, count);
-//         }
-//     }
-// }
-
-// function create_sub_all(count, callback) {
-//     if (conf.sub.length == 0) {
-//         callback(2001, count);
-//     }
-//     else {
-//         if (conf.sub.hasOwnProperty(count)) {
-//             var parent = conf.sub[count].parent;
-//             var rn = conf.sub[count].name;
-//             var nu = conf.sub[count].nu;
-//             onem2m_handler.create_sub(parent, rn, nu, count, function (rsc, res_body, count) {
-//                 if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
-//                     create_sub_all(++count, function (status, count) {
-//                         callback(status, count);
-//                     });
-//                 }
-//                 else {
-//                     callback('9999', count);
-//                 }
-//             });
-//         }
-//         else {
-//             callback(2001, count);
-//         }
-//     }
-// }
-
 setTimeout(setup_resources, 100, 'crtae');
 
 function setup_resources(_status) {
@@ -229,62 +179,7 @@ function setup_resources(_status) {
             }
         });
     }
-    else if (_status === 'delsub') {
-        delete_sub_all(request_count, function (status, count) {
-            if (status == 9999) {
-                console.log('[???} create container error!');
-                // setTimeout(setup_resources, 3000, 'delsub');
-            }
-            else {
-                request_count = ++count;
-                if (conf.sub.length <= count) {
-                    request_count = 0;
-                    setTimeout(setup_resources, 100, 'crtsub');
-                }
-            }
-        });
-    }
-    else if (_status === 'crtsub') {
-        create_sub_all(request_count, function (status, count) {
-            if (status == 9999) {
-                console.log('[???} create container error!');
-                // setTimeout(setup_resources, 1000, 'crtsub');
-            }
-            else {
-                request_count = ++count;
-                if (conf.sub.length <= count) {
-                    // thyme_tas.ready_for_tas();
-
-                    setTimeout(setup_resources, 100, 'crtci');
-                }
-            }
-        });
-    }
-    // else if (_status === 'crtci') {
-    //     if (conf.sim == 'enable') {
-    //         var period = 1000; //ms
-    //         var cnt_idx = 0;
-    //         setTimeout(timer_upload, 1000, period, cnt_idx);
-    //     }
-    // }
 }
-
-// onem2m_handler.on('notification', function (source_uri, cinObj) {
-
-//     console.log(source_uri, cinObj);
-
-//     var path_arr = source_uri.split('/')
-//     var event_cnt_name = path_arr[path_arr.length - 2];
-//     var content = cinObj.con;
-
-//     if (event_cnt_name === 'co2') {
-//         // send to tas
-//         if (socket_arr[path_arr[path_arr.length - 2]] != null) {
-//             socket_arr[path_arr[path_arr.length - 2]].write(JSON.stringify(content) + '<EOF>');
-//         }
-//     }
-// });
-
 mqtt_connect();
 
 // var t_count = 0;
@@ -307,7 +202,6 @@ mqtt_connect();
 //     var content = JSON.stringify({ value: 'TAS' + t_count++ });
 //     setTimeout(timer_upload_action, period, cnt_idx, content, period);
 // }
-
 
 /**************************************************************************************/
 

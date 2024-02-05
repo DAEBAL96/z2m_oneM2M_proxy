@@ -40,7 +40,7 @@ let onem2m_options = {};
 let _this = null;
 
 // module.exports = Onem2mClient;
-function Onem2mClient(options) {
+function Onem2m_handler(options) {
     onem2m_options = options;
 
     EventEmitter.call(this);
@@ -52,9 +52,9 @@ function Onem2mClient(options) {
     }
 }
 
-Onem2mClient.prototype = new EventEmitter();
+Onem2m_handler.prototype = new EventEmitter();
 
-let proto = Onem2mClient.prototype;
+let proto = Onem2m_handler.prototype;
 
 function http_request(path, method, ty, bodyString, callback) {
     let options = {

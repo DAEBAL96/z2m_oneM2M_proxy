@@ -97,7 +97,7 @@ function create_cnt_all(count, callback) {
             console.log(parent)
             var rn = conf.cnt[count].name;
             console.log(rn)
-            onem2m_handler.create_cnt(parent, rn, count, function (rsc, res_body, count) {
+            onem2m_handler.create_z2m_cnt(parent, rn, count, function (rsc, res_body, count) {
                 if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
                     create_cnt_all(++count, function (status, count) {
                         callback(status, count);
@@ -114,55 +114,55 @@ function create_cnt_all(count, callback) {
     }
 }
 
-function delete_sub_all(count, callback) {
-    if (conf.sub.length == 0) {
-        callback(2001, count);
-    }
-    else {
-        if (conf.sub.hasOwnProperty(count)) {
-            var target = conf.sub[count].parent + '/' + conf.sub[count].name;
-            onem2m_handler.delete_sub(target, count, function (rsc, res_body, count) {
-                if (rsc == 5106 || rsc == 2002 || rsc == 2000 || rsc == 4105 || rsc == 4004) {
-                    delete_sub_all(++count, function (status, count) {
-                        callback(status, count);
-                    });
-                }
-                else {
-                    callback(9999, count);
-                }
-            });
-        }
-        else {
-            callback(2001, count);
-        }
-    }
-}
+// function delete_sub_all(count, callback) {
+//     if (conf.sub.length == 0) {
+//         callback(2001, count);
+//     }
+//     else {
+//         if (conf.sub.hasOwnProperty(count)) {
+//             var target = conf.sub[count].parent + '/' + conf.sub[count].name;
+//             onem2m_handler.delete_sub(target, count, function (rsc, res_body, count) {
+//                 if (rsc == 5106 || rsc == 2002 || rsc == 2000 || rsc == 4105 || rsc == 4004) {
+//                     delete_sub_all(++count, function (status, count) {
+//                         callback(status, count);
+//                     });
+//                 }
+//                 else {
+//                     callback(9999, count);
+//                 }
+//             });
+//         }
+//         else {
+//             callback(2001, count);
+//         }
+//     }
+// }
 
-function create_sub_all(count, callback) {
-    if (conf.sub.length == 0) {
-        callback(2001, count);
-    }
-    else {
-        if (conf.sub.hasOwnProperty(count)) {
-            var parent = conf.sub[count].parent;
-            var rn = conf.sub[count].name;
-            var nu = conf.sub[count].nu;
-            onem2m_handler.create_sub(parent, rn, nu, count, function (rsc, res_body, count) {
-                if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
-                    create_sub_all(++count, function (status, count) {
-                        callback(status, count);
-                    });
-                }
-                else {
-                    callback('9999', count);
-                }
-            });
-        }
-        else {
-            callback(2001, count);
-        }
-    }
-}
+// function create_sub_all(count, callback) {
+//     if (conf.sub.length == 0) {
+//         callback(2001, count);
+//     }
+//     else {
+//         if (conf.sub.hasOwnProperty(count)) {
+//             var parent = conf.sub[count].parent;
+//             var rn = conf.sub[count].name;
+//             var nu = conf.sub[count].nu;
+//             onem2m_handler.create_sub(parent, rn, nu, count, function (rsc, res_body, count) {
+//                 if (rsc == 5106 || rsc == 2001 || rsc == 4105) {
+//                     create_sub_all(++count, function (status, count) {
+//                         callback(status, count);
+//                     });
+//                 }
+//                 else {
+//                     callback('9999', count);
+//                 }
+//             });
+//         }
+//         else {
+//             callback(2001, count);
+//         }
+//     }
+// }
 
 setTimeout(setup_resources, 100, 'crtae');
 
@@ -501,7 +501,7 @@ function mqtt_connect() {
                         /* device remote control */
                         // if(Object.keys(control_map).includes(payload_owner)){
                         // if) exist sensor's control mapping -> remote start 
-                        
+
                         if (control_map[payload_owner]) {
                             let sensing_key = Object.keys(sensor[payload_owner])[0]
                             let target_act = control_map[payload_owner];

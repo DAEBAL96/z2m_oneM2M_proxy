@@ -187,7 +187,7 @@ let rtvae = function (target, callback) {
         req_message['m2m:rqp'].fr = onem2m_options.aei;
         req_message['m2m:rqp'].rqi = rqi;
         req_message['m2m:rqp'].pc = {};
-         // 'json'
+        // 'json'
         mqtt_client.publish(req_topic, JSON.stringify(req_message['m2m:rqp']));
         console.log(req_topic + ' (json) ---->');
     }
@@ -429,9 +429,9 @@ let delsub = function (target, count, callback) {
         req_message['m2m:rqp'].fr = onem2m_options.aei;
         req_message['m2m:rqp'].rqi = rqi;
         req_message['m2m:rqp'].pc = {};
-         // 'json'
-            mqtt_client.publish(req_topic, JSON.stringify(req_message['m2m:rqp']));
-            console.log(req_topic + ' (json) ---->');
+        // 'json'
+        mqtt_client.publish(req_topic, JSON.stringify(req_message['m2m:rqp']));
+        console.log(req_topic + ' (json) ---->');
     }
 };
 
@@ -805,13 +805,13 @@ proto.update_z2m_cnt = z2m_udtct;
 proto.delete_z2m_cnt = z2m_delct;
 proto.create_z2m_cin = z2m_crtci;
 
-proto.create_z2m_fcnt_device = z2m_crtfcnt_device; // parent, rn, device_type
-proto.update_z2m_fcnt_device = z2m_udtfcnt_device;
-proto.delete_z2m_fcnt_device = z2m_delfcnt_device;
+// proto.create_z2m_fcnt_device = z2m_crtfcnt_device; // parent, rn, device_type
+// proto.update_z2m_fcnt_device = z2m_udtfcnt_device;
+// proto.delete_z2m_fcnt_device = z2m_delfcnt_device;
 
-proto.create_z2m_fcnt_module = z2m_crtfcnt_module; // parent, rn, module_type
-proto.update_z2m_fcnt_module = z2m_udtfcnt_module; // target, state, module_type, callback
-proto.delete_z2m_fcnt_module = z2m_delfcnt_module;
+// proto.create_z2m_fcnt_module = z2m_crtfcnt_module; // parent, rn, module_type
+// proto.update_z2m_fcnt_module = z2m_udtfcnt_module; // target, state, module_type, callback
+// proto.delete_z2m_fcnt_module = z2m_delfcnt_module;
 
 
 proto.create_sub = crtsub;

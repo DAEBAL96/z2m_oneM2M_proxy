@@ -51,13 +51,13 @@ let act = {
     //     "state": ["on", "off"]
     // },
     "plug": {
-        "state": ["on", "off"]
+        "state": ["ON", "OFF"]
     }
     /* set actuator */
 };
 
 let act_latest_state = {
-    "plug": "off"
+    "plug": "OFF"
 }
 
 
@@ -302,13 +302,18 @@ let z2m_toggle_control = (target_act, target_sensor, sensing_value) => {    // a
                 // 해당 module 돌 때는 init 이지만 만약 센서 및 AE-cnt-cin이 존재하면?
                 // ... .고려해야할 것 ㅈㄴ 많네
                 console.log("toggle_control_payload")
-                if (act_latest_state[target_act] == "off") {
-                    control_payload = '{"state" : "on"}';
+                console.log(act_latest_state[target_act])
+                if (act_latest_state[target_act] == "OFF") {
+                    control_payload = '{"state" : "ON"}';
+                    console.log(control_payload)
+                    console.log("---------------------")
                     z2m_mqtt_client.publish(target_set_topic, control_payload)
                     //z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
                 }
-                else if (act_latest_state[target_act] == "on") {
-                    control_payload = '{"state" : "on"}';
+                else if (act_latest_state[target_act] == "ON") {
+                    control_payload = '{"state" : "OFF"}';
+                    console.log(control_payload)
+                    console.log("---------------------")
                     z2m_mqtt_client.publish(target_set_topic, control_payload)
                     //z2m_mqtt_client.publish(target_set_topic, JSON.stringify(control_payload))
                 }
@@ -397,6 +402,9 @@ function mqtt_connect() {
                         var parent = "/Mobius/" + z2m_conf.base_topic + "/" + rn;
                         onem2m_handler.create_z2m_cin(parent, mqtt_message_json, function (rsc, res_body) {
                             if (act_latest_state[payload_owner]) {
+                                console.log("-----현재최신-----")
+                                console.log(res_body["m2m:cin"]["con"]["state"])
+                                console.log("------------------")
                                 act_latest_state[payload_owner] = res_body["m2m:cin"]["con"]["state"];
                             }
                             console.log("response code = ", rsc)
